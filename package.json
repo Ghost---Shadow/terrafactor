@@ -1,8 +1,8 @@
 {
-  "name": "terraformat",
+  "name": "terrafactor",
   "version": "0.0.0",
   "bin": {
-    "terraformat": "src/index.js"
+    "terrafactor": "src/index.js"
   },
   "description": "TODO",
   "main": "src/index.js",
