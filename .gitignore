@@ -101,3 +101,6 @@ public
 
 # TernJS port file
 .tern-port
+
+# Custom
+terrafactor_output/

@@ -13,5 +13,5 @@ npm i -g terrafactor
 ## Usage
 
 ```sh
-terrafactor ./generated/alicloud
+terrafactor ./inputDir ./outputDir
 ```
