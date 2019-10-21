@@ -1,0 +1,23 @@
+{
+  "name": "terraformat",
+  "version": "0.0.0",
+  "bin": {
+    "terraformat": "src/index.js"
+  },
+  "description": "TODO",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Souradeep Nanda",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ghost---Shadow/terrafactor.git"
+  },
+  "devDependencies": {
+    "eslint": "^6.5.1",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.2"
+  }
+}
