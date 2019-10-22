@@ -1,4 +1,4 @@
-const merge = require('lodash.merge');
+const _ = require('lodash');
 
 // Borrowed with love from
 // https://github.com/mmalecki/terraform-state-merge/blob/master/bin/terraform-state-merge
@@ -13,7 +13,7 @@ const mergeStatesV3 = (unsortedJsons) => {
   function stash(modulesInner) {
     modulesInner.forEach((m) => {
       const path = m.path.join('.');
-      merged[path] = merge(merged[path], m);
+      merged[path] = _.merge(merged[path], m);
     });
   }
 
@@ -28,17 +28,36 @@ const mergeStatesV3 = (unsortedJsons) => {
   };
 };
 
-const mergeStatesV4 = (allStates) => allStates
-  .reduce((acc, next) => (
-    merge(
-      next,
-      {
-        outputs: merge(acc.outputs, next.outputs),
-        resources: acc.resources
-          ? acc.resources.concat(next.resources)
-          : next.resources,
-      },
-    )), { });
+const mergeStatesV4 = (allStates) => {
+  const matcherFunction = (resource) => `${resource.type}.${resource.name}`;
+
+  const mergedState = allStates
+    .reduce((acc, next) => ({
+      ...acc,
+      outputs: _.merge(acc.outputs, next.outputs),
+      resources: _.unionBy(acc.resources, next.resources, matcherFunction),
+    }), {
+      version: 4,
+      terraform_version: allStates[0].terraform_version,
+      serial: 1,
+      lineage: '',
+    });
+
+  mergedState.outputs = Object.keys(mergedState.outputs).sort()
+    .reduce((acc, next) => ({ ...acc, [next]: mergedState.outputs[next] }), {});
+
+  mergedState.resources = mergedState.resources
+    .sort((resource1, resource2) => {
+      const keys = ['mode', 'type', 'name'];
+      for (let i = 0; i < keys.length; i += 1) {
+        const cmp = resource1[keys[i]].localeCompare(resource2[keys[i]]);
+        if (cmp !== 0) return cmp;
+      }
+      return 0;
+    });
+
+  return mergedState;
+};
 
 module.exports = {
   mergeStatesV4,

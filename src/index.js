@@ -47,7 +47,7 @@ const mergerFun = {
 }[allStates[0].version];
 
 if (!mergerFun) {
-  console.error(`Unknown version ${allStates[0].version}`);
+  console.error(`Unsupported version ${allStates[0].version}`);
 
   process.exit(1);
 }

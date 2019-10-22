@@ -5,4 +5,4 @@ npm start ../terraformer/generated/alicloud ./terrafactor_output
 mv ./.terraform ./terrafactor_output/.terraform 
 cd ./terrafactor_output
 terraform init
-terraform refresh
+terraform plan
