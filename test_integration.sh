@@ -1,6 +1,6 @@
 # Create a backup of .terraform
 rm -rf ./.terraform
-mv ./terrafactor_output/.terraform ./terraform
+mv ./terrafactor_output/.terraform ./.terraform
 
 # Clear both generated directories
 rm -rf ./terrafactor_output
