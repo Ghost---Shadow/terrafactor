@@ -4,9 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const { mergeStatesV3, mergeStatesV4 } = require('./state-merger');
 const { walk } = require('./walker');
+const { postProcess } = require('./post-process');
 
 const inputDir = process.argv[2];
-const outputDir = process.argv[3];
+const outputDir = process.argv[3] || './terrafactor_output';
 
 if (!inputDir || !outputDir) {
   console.error('Usage:\n\nterrafactor ./inputDir ./outputDir');
@@ -55,3 +56,10 @@ if (!mergerFun) {
 const mergedState = mergerFun(allStates);
 
 fs.writeFileSync(path.join(outputDir, 'terraform.tfstate'), JSON.stringify(mergedState, null, 2));
+
+const processedDir = `${outputDir}_processed`;
+if (!fs.existsSync(processedDir)) {
+  fs.mkdirSync(processedDir);
+}
+
+postProcess(outputDir, processedDir);

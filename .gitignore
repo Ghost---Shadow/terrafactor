@@ -104,3 +104,5 @@ public
 
 # Custom
 terrafactor_output/
+terrafactor_output_processed/
+.terraform/
