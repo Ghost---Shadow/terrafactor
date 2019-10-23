@@ -8,8 +8,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test:integration": "sh ./test_integration.sh",
-    "test": "jest"
+    "test": "sh ./test_integration.sh"
   },
   "author": "Souradeep Nanda",
   "license": "MIT",
