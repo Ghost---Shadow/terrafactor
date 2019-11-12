@@ -2,6 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
+const { chdir, cwd } = require('process');
 const { mergeStatesV3, mergeStatesV4 } = require('./state-merger');
 const { walk } = require('./walker');
 const { postProcess } = require('./post-process');
@@ -62,4 +64,12 @@ if (!fs.existsSync(processedDir)) {
   fs.mkdirSync(processedDir);
 }
 
+console.log('Updating tfstate to version 4. Please wait');
+const currentDir = cwd();
+chdir(outputDir);
+spawnSync('terraform', ['init'], { stdio: 'inherit' });
+spawnSync('terraform', ['refresh'], { stdio: 'inherit' });
+chdir(currentDir);
+
+console.log('Post processing');
 postProcess(outputDir, processedDir);
