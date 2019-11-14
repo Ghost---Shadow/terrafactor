@@ -17,10 +17,11 @@ const MIN_MODULE_SIZE = 2;
 
 const getValidIdsForInstance = (instance, allValidIds) => {
   const flatAttributes = flatten(instance.attributes);
-  const result = Object.keys(flatAttributes)
-    .filter((k) => allValidIds.indexOf(flatAttributes[k]) > 0)
-    .filter((k) => k !== 'id')
-    .map((k) => flatAttributes[k]);
+  const attributeKeys = Object.keys(flatAttributes);
+  const attributeWithIdAsValue = attributeKeys
+    .filter((k) => allValidIds.indexOf(flatAttributes[k]) > -1);
+  const filteredOutSelfReference = attributeWithIdAsValue.filter((k) => k !== 'id');
+  const result = filteredOutSelfReference.map((k) => flatAttributes[k]);
   return result;
 };
 
@@ -57,7 +58,7 @@ const getAllConnectedComponentsForId = (tfState, allValidIds, adj, visited, colo
   if (adj[id] === undefined) return newVisited;
   const childIds = Object.keys(adj[id]);
 
-  return childIds
+  const result = childIds
     .reduce((runningVisited, childId) => getAllConnectedComponentsForId(
       tfState,
       allValidIds,
@@ -67,6 +68,8 @@ const getAllConnectedComponentsForId = (tfState, allValidIds, adj, visited, colo
       childId,
     ),
     newVisited);
+
+  return result;
 };
 
 const colorAllConnectedComponents = (tfState, allValidIds, adj) => {
@@ -114,7 +117,9 @@ const coloredComponentsTo2dArr = (coloredComponents) => {
 const getModuleIdFromResource = (componentArr, resource) => {
   const { id } = resource.instances[0].attributes;
   for (let i = 0; i < componentArr.length; i += 1) {
-    if (componentArr[i].indexOf(id) > -1) return i;
+    if (componentArr[i].indexOf(id) > -1) {
+      return i;
+    }
   }
   return 0;
 };
@@ -133,21 +138,26 @@ const addModuleToTfState = (tfState, componentArr) => {
 const findIdForHcl = (tfState, hclArray) => {
   const names = hclArray.map((res) => res.match(/resource "\S+" "(.*)"/)[1]);
   const alignedResources = names.map((name) => _.find(tfState.resources, { name }));
-  return alignedResources.reduce((acc, resource, index) => ({
+  const result = alignedResources.reduce((acc, resource, index) => ({
     ...acc,
     [resource.instances[0].attributes.id]: hclArray[index],
   }), {});
+
+  return result;
 };
 
-const mainTfGenerator = (numModules) => [...Array(numModules)]
-  .reduce((acc, next, index) => `
+const mainTfGenerator = (numModules) => {
+  const result = [...Array(numModules)]
+    .reduce((acc, next, index) => `
 ${acc}
 module "mod_${index}" {
   source = "./mod_${index}"
 }
 `, '');
+  return result;
+};
 
-const main = async (generatedDir, outputDir) => {
+const modularize = async (generatedDir, outputDir) => {
   const statePath = path.join(generatedDir, 'terraform.tfstate');
   const tfState = JSON.parse((await readFile(statePath)).toString());
   if (tfState.version !== 4) {
@@ -190,4 +200,18 @@ const main = async (generatedDir, outputDir) => {
   await writeFile(mainTfPath, mainTfContents);
 };
 
-main('./terrafactor_output', './terrafactor_output_mst');
+module.exports = {
+  getValidIdsForInstance,
+  getInstanceForId,
+  generateAdjacencyMatrix,
+  getAllConnectedComponentsForId,
+  colorAllConnectedComponents,
+  coloredComponentsTo2dArr,
+  getModuleIdFromResource,
+  addModuleToTfState,
+  findIdForHcl,
+  mainTfGenerator,
+  modularize,
+};
+
+// modularize('./terrafactor_output', './terrafactor_output_mst');
