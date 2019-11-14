@@ -1,0 +1,20 @@
+resource "alicloud_nat_gateway" "gw_name_1" {
+  instance_charge_type = "${var.instance_charge_type_}"
+  name                 = "${var.name_}"
+  specification        = "${var.specification_}"
+  vpc_id               = "vpc-1"
+}
+
+resource "alicloud_nat_gateway" "gw_name_2" {
+  instance_charge_type = "${var.instance_charge_type_}"
+  name                 = "${var.name_}"
+  specification        = "${var.specification_}"
+  vpc_id               = "vpc-2"
+}
+
+resource "alicloud_nat_gateway" "gw_name_3" {
+  instance_charge_type = "${var.instance_charge_type_}"
+  name                 = "name2"
+  specification        = "${var.specification_}"
+  vpc_id               = "vpc-3"
+}

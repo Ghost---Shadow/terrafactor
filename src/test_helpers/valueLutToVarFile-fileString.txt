@@ -1,0 +1,15 @@
+
+variable "instance_charge_type_" {
+  type = string
+  default = "PostPaid"
+}
+
+variable "name_" {
+  type = string
+  default = "name1"
+}
+
+variable "specification_" {
+  type = string
+  default = "Small"
+}

@@ -213,5 +213,3 @@ module.exports = {
   mainTfGenerator,
   modularize,
 };
-
-// modularize('./terrafactor_output', './terrafactor_output_mst');

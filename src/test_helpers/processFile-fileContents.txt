@@ -1,0 +1,20 @@
+resource "alicloud_nat_gateway" "gw_name_1" {
+  instance_charge_type = "PostPaid"
+  name                 = "name1"
+  specification        = "Small"
+  vpc_id               = "vpc-1"
+}
+
+resource "alicloud_nat_gateway" "gw_name_2" {
+  instance_charge_type = "PostPaid"
+  name                 = "name1"
+  specification        = "Small"
+  vpc_id               = "vpc-2"
+}
+
+resource "alicloud_nat_gateway" "gw_name_3" {
+  instance_charge_type = "PostPaid"
+  name                 = "name2"
+  specification        = "Small"
+  vpc_id               = "vpc-3"
+}

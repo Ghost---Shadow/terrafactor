@@ -11,30 +11,39 @@ const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const copyFile = util.promisify(fs.copyFile);
 
-const toRegexLut = (inverseLut) => Object.keys(inverseLut)
-  .reduce((acc, key) => {
+const toRegexLut = (inverseLut) => {
+  const keys = Object.keys(inverseLut);
+  const result = keys.reduce((acc, key) => {
     const regex = `"${escapeStringRegexp(key)}"`;
     return {
       ...acc,
       [regex]: inverseLut[key],
     };
   }, {});
+  return result;
+};
 
-const processFile = (fileContents, regexLut) => Object.keys(regexLut)
-  .reduce((lastFileContents, nextRegex) => {
-    const regex = new RegExp(nextRegex, 'g');
-    return lastFileContents
-      .replace(regex, `"$\{${regexLut[nextRegex]}}"`);
-  }, fileContents);
+const processFile = (fileContents, regexLut) => {
+  const result = Object.keys(regexLut)
+    .reduce((lastFileContents, nextRegex) => {
+      const regex = new RegExp(nextRegex, 'g');
+      return lastFileContents
+        .replace(regex, `"$\{${regexLut[nextRegex]}}"`);
+    }, fileContents);
+  return result;
+};
 
-const filterOnlyNotIdsLut = (lut, dryness = 2) => Object.keys(lut).reduce((acc, key) => {
-  const ids = lut[key].filter((maybeId) => maybeId.endsWith('.id'));
-  // DRY: Dont repeat yourself
-  const isWetEnough = lut[key].length >= dryness;
-  const isIdReference = !!ids.length;
-  if (!isIdReference && isWetEnough) return { ...acc, [key]: lut[key] };
-  return acc;
-}, {});
+const filterOnlyNotIdsLut = (lut, dryness = 2) => {
+  const result = Object.keys(lut).reduce((acc, key) => {
+    const ids = lut[key].filter((maybeId) => maybeId.endsWith('.id'));
+    // DRY: Dont repeat yourself
+    const isWetEnough = lut[key].length >= dryness;
+    const isIdReference = !!ids.length;
+    if (!isIdReference && isWetEnough) return { ...acc, [key]: lut[key] };
+    return acc;
+  }, {});
+  return result;
+};
 
 const varToValueLut = (lut) => {
   const valueLut = Object.keys(lut)
@@ -60,17 +69,22 @@ const varToValueLut = (lut) => {
     .reduce((acc, key) => ({ ...acc, [key]: valueLut[key] }), {});
 
   // Invert the mapping
-  return Object.keys(sortedLut)
+  const result = Object.keys(sortedLut)
     .reduce((acc, key) => ({ ...acc, [sortedLut[key]]: key }), {});
+  return result;
 };
 
-const valueLutToVarFile = (valueLut) => Object.keys(valueLut)
-  .reduce((acc, key) => `${acc}
+const valueLutToVarFile = (valueLut) => {
+  const fileString = Object.keys(valueLut)
+    .reduce((acc, key) => `${acc}
 variable "${valueLut[key]}" {
   type = string
   default = "${key}"
 }
 `, '');
+  // fs.writeFileSync('jsons/valueLutToVarFile-fileString.txt', fileString);
+  return fileString;
+};
 
 const mergeLuts = (idsLut, valueLut) => {
   const varLut = Object.keys(valueLut)
@@ -79,7 +93,36 @@ const mergeLuts = (idsLut, valueLut) => {
       [key]: `var.${valueLut[key]}`,
     }), {});
 
-  return { ...idsLut, ...varLut };
+  const result = { ...idsLut, ...varLut };
+  return result;
+};
+
+const tfStateToRegexLut = (tfState) => {
+  const { resources } = tfState;
+  const inverseLut = genInverseLut(resources);
+  const idsLut = filterOnlyIdsLut(inverseLut);
+  const notIdsLut = filterOnlyNotIdsLut(inverseLut);
+  const valueLut = varToValueLut(notIdsLut);
+  const varFileString = valueLutToVarFile(valueLut);
+  const mergedLuts = mergeLuts(idsLut, valueLut);
+  const regexLut = toRegexLut(mergedLuts);
+  const result = { regexLut, varFileString };
+  return result;
+};
+
+const replaceAllFilesInDir = async (dirToScan, outputDir, regexLut) => {
+  const tfFileNames = (await readdir(dirToScan))
+    .filter((maybeFile) => maybeFile.match(/(\.tf$|\.hcl$)/))
+    .filter((fileName) => !(fileName.match('provider.tf') || fileName.match('outputs.tf')));
+
+  const replacePromises = tfFileNames.map(async (fileName) => {
+    const inputFilePath = path.join(dirToScan, fileName);
+    const outputFilePath = path.join(outputDir, fileName);
+    const tfFileContents = (await readFile(inputFilePath)).toString();
+    const processedFile = processFile(tfFileContents, regexLut);
+    return writeFile(outputFilePath, processedFile);
+  });
+  return Promise.all(replacePromises);
 };
 
 const postProcess = async (generatedDir, outputDir) => {
@@ -90,33 +133,23 @@ const postProcess = async (generatedDir, outputDir) => {
     process.exit(1);
   }
 
-  const { resources } = stateJson;
-
-  const inverseLut = genInverseLut(resources);
-  const idsLut = filterOnlyIdsLut(inverseLut);
-  const notIdsLut = filterOnlyNotIdsLut(inverseLut);
-  const valueLut = varToValueLut(notIdsLut);
-  const varFileString = valueLutToVarFile(valueLut);
-  const mergedLuts = mergeLuts(idsLut, valueLut);
-  const regexLut = toRegexLut(mergedLuts);
-
-  const tfFileNames = (await readdir(generatedDir))
-    .filter((maybeFile) => maybeFile.match(/(\.tf$|\.hcl$)/));
-  const replacePromises = tfFileNames.map(async (fileName) => {
-    const inputFilePath = path.join(generatedDir, fileName);
-    const outputFilePath = path.join(outputDir, fileName);
-    const tfFileContents = (await readFile(inputFilePath)).toString();
-    const processedFile = processFile(tfFileContents, regexLut);
-    return writeFile(outputFilePath, processedFile);
-  });
-
+  const { regexLut, varFileString } = tfStateToRegexLut(stateJson);
+  const replacePromises = replaceAllFilesInDir(generatedDir, outputDir, regexLut);
   const copyPromise = copyFile(path.join(generatedDir, 'terraform.tfstate'),
     path.join(outputDir, 'terraform.tfstate'));
   const varFilePromise = writeFile(path.join(outputDir, 'variables.tf'), varFileString);
 
-  return Promise.all([...replacePromises, copyPromise, varFilePromise]);
+  return Promise.all([replacePromises, copyPromise, varFilePromise]);
 };
 
 module.exports = {
+  toRegexLut,
+  processFile,
+  filterOnlyNotIdsLut,
+  varToValueLut,
+  valueLutToVarFile,
+  mergeLuts,
+  tfStateToRegexLut,
+  replaceAllFilesInDir,
   postProcess,
 };
