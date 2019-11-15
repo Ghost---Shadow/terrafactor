@@ -106,6 +106,7 @@ public
 terrafactor_output*/
 jsons*/
 .terraform/
+scratch
 
 # Additional for .npmignore
 src/test_helpers/*

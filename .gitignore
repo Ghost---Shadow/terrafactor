@@ -106,3 +106,4 @@ public
 terrafactor_output*/
 jsons*/
 .terraform/
+scratch
