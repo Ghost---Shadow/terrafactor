@@ -1,15 +1,19 @@
 const path = require('path');
 const fs = require('fs');
 const util = require('util');
+const _ = require('lodash');
 
 const escapeStringRegexp = require('escape-string-regexp');
 
 const { genInverseLut, filterOnlyIdsLut } = require('./common');
 
 const readdir = util.promisify(fs.readdir);
+const stat = util.promisify(fs.stat);
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const copyFile = util.promisify(fs.copyFile);
+const exists = util.promisify(fs.exists);
+const mkdir = util.promisify(fs.mkdir);
 
 // For testing
 const dumpJson = () => null;
@@ -135,6 +139,9 @@ const tfStateToRegexLut = (tfState) => {
 };
 
 const replaceAllFilesInDir = async (dirToScan, outputDir, regexLut) => {
+  dumpJson('replaceAllFilesInDir-dirToScan', dirToScan);
+  dumpJson('replaceAllFilesInDir-outputDir', outputDir);
+  dumpJson('replaceAllFilesInDir-regexLut', regexLut);
   const tfFileNames = (await readdir(dirToScan))
     .filter((maybeFile) => maybeFile.match(/(\.tf$|\.hcl$)/))
     .filter((fileName) => !(fileName.match('provider.tf') || fileName.match('outputs.tf')));
@@ -149,8 +156,59 @@ const replaceAllFilesInDir = async (dirToScan, outputDir, regexLut) => {
   return Promise.all(replacePromises);
 };
 
-const postProcess = async (generatedDir, outputDir) => {
-  const statePath = path.join(generatedDir, 'terraform.tfstate');
+const extractAllUsedVarsInFile = (fileString) => {
+  dumpJson('extractAllUsedVarsInFile-fileString', fileString);
+  const groups = [];
+  const myRegexp = /\$\{var\.(.*)\}/g;
+  let match = myRegexp.exec(fileString);
+  while (match != null) {
+    groups.push(match[1]);
+    match = myRegexp.exec(fileString);
+  }
+  dumpJson('extractAllUsedVarsInFile-groups', groups);
+  return groups;
+};
+
+const extractAllUsedVarsInDir = async (dir) => {
+  dumpJson('extractAllUsedVarsInDir-dir', dir);
+  const fileNames = await readdir(dir);
+  const tfFiles = fileNames.filter((fn) => fn.endsWith('.tf'));
+  const varPromises = tfFiles.map(async (fn) => {
+    const fileString = (await readFile(path.join(dir, fn))).toString();
+    return extractAllUsedVarsInFile(fileString);
+  });
+  const allVars = await Promise.all(varPromises);
+  const uniqVars = _.uniq(_.flatten(allVars));
+  dumpJson('extractAllUsedVarsInDir-uniqVars', uniqVars);
+  return uniqVars;
+};
+
+const filterVarFile = (varFileContents, varsInScope) => {
+  const varArray = varFileContents.split('variable ');
+  const filteredVars = varArray.map((v) => /"(.*)"/.exec(v)).filter((v) => v);
+  const lut = filteredVars.reduce((acc, next) => ({
+    ...acc,
+    [next[1]]: next.input,
+  }), {});
+  const resultString = varsInScope.sort().reduce((acc, next) => `${acc}variable ${lut[next]}`, '');
+  return resultString;
+};
+
+const processDir = async (fromDir, toDir, regexLut, varFileString) => {
+  dumpJson('processDir-fromDir', fromDir);
+  dumpJson('processDir-toDir', toDir);
+  dumpJson('processDir-regexLut', regexLut);
+  dumpJson('processDir-varFileString', varFileString);
+  const isDirExist = await exists(toDir);
+  if (!isDirExist) await mkdir(toDir);
+  await replaceAllFilesInDir(fromDir, toDir, regexLut);
+  const usedVars = await extractAllUsedVarsInDir(toDir);
+  const filtedVarFile = filterVarFile(varFileString, usedVars);
+  await writeFile(path.join(toDir, 'variables.tf'), filtedVarFile);
+};
+
+const postProcess = async (fromDir, toDir) => {
+  const statePath = path.join(fromDir, 'terraform.tfstate');
   const stateJson = JSON.parse(fs.readFileSync(statePath).toString());
   if (stateJson.version !== 4) {
     console.error('Only tfstate version 4 is supported');
@@ -158,12 +216,31 @@ const postProcess = async (generatedDir, outputDir) => {
   }
 
   const { regexLut, varFileString } = tfStateToRegexLut(stateJson);
-  const replacePromises = replaceAllFilesInDir(generatedDir, outputDir, regexLut);
-  const copyPromise = copyFile(path.join(generatedDir, 'terraform.tfstate'),
-    path.join(outputDir, 'terraform.tfstate'));
-  const varFilePromise = writeFile(path.join(outputDir, 'variables.tf'), varFileString);
+  const stateCopyPromise = copyFile(path.join(fromDir, 'terraform.tfstate'),
+    path.join(toDir, 'terraform.tfstate'));
+  const mainTfCopyPromise = copyFile(path.join(fromDir, 'main.tf'),
+    path.join(toDir, 'main.tf'));
+  const providerTfCopyPromise = copyFile(path.join(fromDir, 'provider.tf'), path.join(toDir, 'provider.tf'));
 
-  return Promise.all([replacePromises, copyPromise, varFilePromise]);
+  const allDirPromises = (await readdir(fromDir))
+    .map(async (fileName) => {
+      const s = await stat(path.join(fromDir, fileName));
+      return { fileName, dir: s.isDirectory() };
+    });
+  const allDirs = (await Promise.all(allDirPromises))
+    .filter((d) => d.dir)
+    .map((d) => d.fileName)
+    .filter((d) => d !== '.terraform');
+  const modulePromises = allDirs
+    .map((moduleDir) => processDir(
+      path.join(fromDir, moduleDir),
+      path.join(toDir, moduleDir),
+      regexLut, varFileString,
+    ));
+
+  return Promise.all([...modulePromises,
+    stateCopyPromise, mainTfCopyPromise,
+    providerTfCopyPromise]);
 };
 
 module.exports = {
@@ -175,5 +252,8 @@ module.exports = {
   mergeLuts,
   tfStateToRegexLut,
   replaceAllFilesInDir,
+  extractAllUsedVarsInFile,
+  extractAllUsedVarsInDir,
+  filterVarFile,
   postProcess,
 };

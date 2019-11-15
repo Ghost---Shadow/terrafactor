@@ -7,6 +7,7 @@ const {
   valueLutToVarFile,
   mergeLuts,
   tfStateToRegexLut,
+  filterVarFile,
 } = require('./post-process');
 
 const tfState = require('./test_helpers/initial.tfstate.json');
@@ -59,6 +60,35 @@ describe('post-process', () => {
   describe('tfStateToRegexLut', () => {
     it('should work for happy path', () => {
       expect(tfStateToRegexLut(tfState)).toEqual({ regexLut, varFileString: varFile });
+    });
+  });
+  describe('filterVarFile', () => {
+    it('should work for happy path', () => {
+      const inputVarFile = `
+      variable "a" {
+        asjdlkajs
+      }
+
+      variable "b" {
+        asdsada
+      }
+
+      variable "c" {
+        jljkljljl
+      }
+
+      `;
+      const varsInScope = ['a', 'c'];
+      const expected = `variable "a" {
+        asjdlkajs
+      }
+
+      variable "c" {
+        jljkljljl
+      }
+
+      `;
+      expect(filterVarFile(inputVarFile, varsInScope)).toEqual(expected);
     });
   });
 });

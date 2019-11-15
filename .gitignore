@@ -103,8 +103,6 @@ public
 .tern-port
 
 # Custom
-terrafactor_output/
-terrafactor_output_processed/
-terrafactor_output_mst/
-.terraform/
+terrafactor_output*/
 jsons*/
+.terraform/

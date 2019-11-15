@@ -9,6 +9,7 @@ const exists = util.promisify(fs.exists);
 const mkdir = util.promisify(fs.mkdir);
 const readdir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
+const copyFile = util.promisify(fs.copyFile);
 
 // There must be greater than MIN_MODULE_SIZE connected components to be considered a module
 const MIN_MODULE_SIZE = 2;
@@ -246,6 +247,7 @@ const modularize = async (generatedDir, outputDir) => {
   const newTfState = addModuleToTfState(tfState, componentArr);
   const newStatePath = path.join(outputDir, 'terraform.tfstate');
   await writeFile(newStatePath, JSON.stringify(newTfState, null, 2));
+  await copyFile(path.join(generatedDir, 'provider.tf'), path.join(outputDir, 'provider.tf'));
 
   const tfFileNames = (await readdir(generatedDir))
     .filter((maybeFile) => maybeFile.match(/(\.tf$|\.hcl$)/))
