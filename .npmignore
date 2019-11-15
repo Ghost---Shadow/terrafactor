@@ -3,3 +3,4 @@
 src/**/*.test.js
 !package.json
 !README.md
+!LICENSE.md
