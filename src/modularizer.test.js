@@ -1,204 +1,113 @@
 const fs = require('fs');
 const {
-  getValidIdsForInstance,
-  getInstanceForId,
+  getValidNamesFromResource,
+  getResourceForName,
   generateAdjacencyMatrix,
-  getAllConnectedComponentsForId,
+  getAllConnectedComponentsForName,
   colorAllConnectedComponents,
   coloredComponentsTo2dArr,
   getModuleIdFromResource,
   addModuleToTfState,
-  findIdForHcl,
+  generateNameToHclLut,
   mainTfGenerator,
+  getNameFromResource,
+  getNameFromId,
 } = require('./modularizer');
 
+const tfState = require('./test_helpers/initial.tfstate.json');
+const tfStateFinal = require('./test_helpers/final.tfstate.json');
+const allValidIds = require('./test_helpers/allValidIds.json');
+const allNames = require('./test_helpers/allNames.json');
+const adj = require('./test_helpers/adj.json');
+const visited = require('./test_helpers/visited.json');
+const moduleArr = require('./test_helpers/moduleArr.json');
+const hclArray = require('./test_helpers/hclArray.json');
+const hclLut = require('./test_helpers/hclLut.json');
 
-const tfState = require('./test_helpers/sample.tfstate.json');
-const tfStateFinal = require('./test_helpers/sample_final.tfstate.json');
-
-const mainTf = fs.readFileSync('./src/test_helpers/main.tf.sample').toString();
-const allValidIds = [
-  'ngw-1',
-  'ngw-2',
-  'ngw-3',
-];
-const adj = {
-  'ngw-1': {
-    'ngw-2': true,
-    'ngw-3': true,
-  },
-  'ngw-2': {
-    'ngw-1': true,
-    'ngw-3': true,
-  },
-  'ngw-3': {
-    'ngw-2': true,
-    'ngw-1': true,
-  },
-};
+const mainTf = fs.readFileSync('./src/test_helpers/mainTfGenerator-result.txt').toString();
 
 describe('modularizer', () => {
-  describe('getValidIdsForInstance', () => {
-    it('should do stuff', () => {
-      const instance = {
-        schema_version: 0,
-        attributes: {
-          bandwidth_package_ids: '',
-          bandwidth_packages: [],
-          description: '',
-          forward_table_ids: 'ftb-3',
-          id: 'ngw-3',
-          dummy_field: 'ngw-1',
-          instance_charge_type: 'PostPaid',
-          name: 'name2',
-          period: null,
-          snat_table_ids: 'stb-3',
-          spec: null,
-          specification: 'Small',
-          vpc_id: 'vpc-3',
-        },
-      };
-      const expected = ['ngw-1'];
-      expect(getValidIdsForInstance(instance, allValidIds)).toEqual(expected);
+  describe('getNameFromId', () => {
+    it('should work for happy path', () => {
+      const { id } = tfState.resources[0].instances[0].attributes;
+      const name = getNameFromResource(tfState.resources[0]);
+      expect(getNameFromId(tfState, id)).toEqual(name);
     });
   });
-  describe('getInstanceForId', () => {
-    it('should do stuff', () => {
-      const id = 'ngw-3';
-      const expected = {
-        schema_version: 0,
-        attributes: {
-          bandwidth_package_ids: '',
-          bandwidth_packages: [],
-          description: '',
-          forward_table_ids: 'ftb-3',
-          id: 'ngw-3',
-          dummy_field: 'ngw-1',
-          instance_charge_type: 'PostPaid',
-          name: 'name2',
-          period: null,
-          snat_table_ids: 'stb-3',
-          spec: null,
-          specification: 'Small',
-          vpc_id: 'vpc-3',
-        },
-      };
-      expect(getInstanceForId(tfState, id)).toEqual(expected);
+  describe('getValidNamesFromResource', () => {
+    it('should work for happy path', () => {
+      const resource = tfState.resources[0];
+      const expected = [getNameFromResource(tfState.resources[1])];
+      expect(getValidNamesFromResource(tfState, resource, allValidIds, allNames)).toEqual(expected);
+    });
+  });
+  describe('getResourceForName', () => {
+    it('should work for happy path', () => {
+      const name = 'provider.alicloud.alicloud_nat_gateway.gw_name_3';
+      const expected = tfState.resources[2];
+      expect(getResourceForName(tfState, name)).toEqual(expected);
     });
   });
   describe('generateAdjacencyMatrix', () => {
-    it('should do stuff', () => {
+    it('should work for happy path', () => {
       const expected = adj;
-      expect(generateAdjacencyMatrix(tfState, allValidIds)).toEqual(expected);
+      expect(generateAdjacencyMatrix(tfState, allValidIds, allNames)).toEqual(expected);
     });
   });
-  describe('getAllConnectedComponentsForId', () => {
-    it('should do stuff', () => {
-      const visited = {
-        'ngw-1': 1,
-        'ngw-2': 1,
-        'ngw-3': false,
+  describe('getAllConnectedComponentsForName', () => {
+    it('should work for happy path', () => {
+      const visitedBefore = {
+        'provider.alicloud.alicloud_nat_gateway.gw_name_1': false,
+        'provider.alicloud.alicloud_nat_gateway.gw_name_2': false,
+        'provider.alicloud.alicloud_nat_gateway.gw_name_3': false,
       };
       const color = 1;
-      const id = 'ngw-3';
-      const expected = {
-        'ngw-1': 1,
-        'ngw-2': 1,
-        'ngw-3': 1,
-      };
-      expect(getAllConnectedComponentsForId(tfState,
-        allValidIds,
+      const name = 'provider.alicloud.alicloud_nat_gateway.gw_name_1';
+      const expected = visited;
+      expect(getAllConnectedComponentsForName(tfState,
+        allNames,
         adj,
-        visited,
+        visitedBefore,
         color,
-        id)).toEqual(expected);
+        name)).toEqual(expected);
     });
   });
   describe('colorAllConnectedComponents', () => {
-    it('should do stuff', () => {
-      const expected = {
-        'ngw-1': 1,
-        'ngw-2': 1,
-        'ngw-3': 1,
-      };
-      expect(colorAllConnectedComponents(tfState, allValidIds, adj)).toEqual(expected);
+    it('should work for happy path', () => {
+      const expected = visited;
+      expect(colorAllConnectedComponents(tfState, allNames, adj)).toEqual(expected);
     });
   });
   describe('coloredComponentsTo2dArr', () => {
-    it('should do stuff', () => {
-      const coloredComponents = {
-        'ngw-1': 1,
-        'ngw-2': 1,
-        'ngw-3': 1,
-      };
-      const expected = [[], ['ngw-1', 'ngw-2', 'ngw-3']];
+    it('should work for happy path', () => {
+      const coloredComponents = visited;
+      const expected = moduleArr;
       expect(coloredComponentsTo2dArr(coloredComponents)).toEqual(expected);
     });
   });
   describe('getModuleIdFromResource', () => {
-    it('should do stuff', () => {
-      const componentArr = [
-        [],
-        [
-          'ngw-1',
-          'ngw-2',
-          'ngw-3',
-        ],
-      ];
-      const resource = {
-        mode: 'managed',
-        type: 'alicloud_nat_gateway',
-        name: 'gw_name_3',
-        provider: 'provider.alicloud',
-        instances: [
-          {
-            schema_version: 0,
-            attributes: {
-              bandwidth_package_ids: '',
-              bandwidth_packages: [],
-              description: '',
-              forward_table_ids: 'ftb-3',
-              id: 'ngw-3',
-              dummy_field: 'ngw-1',
-              instance_charge_type: 'PostPaid',
-              name: 'name2',
-              period: null,
-              snat_table_ids: 'stb-3',
-              spec: null,
-              specification: 'Small',
-              vpc_id: 'vpc-3',
-            },
-          },
-        ],
-      };
+    it('should work for happy path', () => {
+      const componentArr = moduleArr;
+      const resource = tfState.resources[2];
       const expected = 1;
       expect(getModuleIdFromResource(componentArr, resource)).toEqual(expected);
     });
   });
   describe('addModuleToTfState', () => {
-    it('should do stuff', () => {
-      const componentArr = [[], ['ngw-1', 'ngw-2', 'ngw-3']];
+    it('should work for happy path', () => {
+      const componentArr = moduleArr;
       const expected = tfStateFinal;
       expect(addModuleToTfState(tfState, componentArr)).toEqual(expected);
     });
   });
-  describe('findIdForHcl', () => {
-    it('should do stuff', () => {
-      const hclArray = [
-        'resource "alicloud_nat_gateway" "gw_name_1" {\n  instance_charge_type = "PostPaid"\n  name                 = "name1"\n  specification        = "Small"\n  vpc_id               = "vpc-1"\n}\n\n',
-        'resource "alicloud_nat_gateway" "gw_name_2" {\n  instance_charge_type = "PostPaid"\n  name                 = "name1"\n  specification        = "Small"\n  vpc_id               = "vpc-2"\n}\n\n',
-        'resource "alicloud_nat_gateway" "gw_name_3" {\n  instance_charge_type = "PostPaid"\n  name                 = "name2"\n  specification        = "Small"\n  vpc_id               = "vpc-3"\n}\n',
-      ];
-      const expected = {
-        'ngw-1': 'resource "alicloud_nat_gateway" "gw_name_1" {\n  instance_charge_type = "PostPaid"\n  name                 = "name1"\n  specification        = "Small"\n  vpc_id               = "vpc-1"\n}\n\n',
-        'ngw-2': 'resource "alicloud_nat_gateway" "gw_name_2" {\n  instance_charge_type = "PostPaid"\n  name                 = "name1"\n  specification        = "Small"\n  vpc_id               = "vpc-2"\n}\n\n',
-        'ngw-3': 'resource "alicloud_nat_gateway" "gw_name_3" {\n  instance_charge_type = "PostPaid"\n  name                 = "name2"\n  specification        = "Small"\n  vpc_id               = "vpc-3"\n}\n',
-      };
-      expect(findIdForHcl(tfState, hclArray)).toEqual(expected);
+  describe('generateNameToHclLut', () => {
+    it('should work for happy path', () => {
+      const expected = hclLut;
+      expect(generateNameToHclLut(tfState, hclArray)).toEqual(expected);
     });
   });
   describe('mainTfGenerator', () => {
-    it('should do stuff', () => {
+    it('should work for happy path', () => {
       const numModules = 2;
       expect(mainTfGenerator(numModules)).toEqual(mainTf);
     });

@@ -1,0 +1,55 @@
+{
+  "ftb-1": [
+    "alicloud_nat_gateway.gw_name_1.forward_table_ids"
+  ],
+  "ngw-1": [
+    "alicloud_nat_gateway.gw_name_1.id"
+  ],
+  "PostPaid": [
+    "alicloud_nat_gateway.gw_name_1.instance_charge_type",
+    "alicloud_nat_gateway.gw_name_2.instance_charge_type",
+    "alicloud_nat_gateway.gw_name_3.instance_charge_type"
+  ],
+  "name1": [
+    "alicloud_nat_gateway.gw_name_1.name",
+    "alicloud_nat_gateway.gw_name_2.name"
+  ],
+  "stb-1": [
+    "alicloud_nat_gateway.gw_name_1.snat_table_ids"
+  ],
+  "Small": [
+    "alicloud_nat_gateway.gw_name_1.specification",
+    "alicloud_nat_gateway.gw_name_2.specification",
+    "alicloud_nat_gateway.gw_name_3.specification"
+  ],
+  "vpc-1": [
+    "alicloud_nat_gateway.gw_name_1.vpc_id"
+  ],
+  "ftb-2": [
+    "alicloud_nat_gateway.gw_name_2.forward_table_ids"
+  ],
+  "ngw-2": [
+    "alicloud_nat_gateway.gw_name_2.id"
+  ],
+  "stb-2": [
+    "alicloud_nat_gateway.gw_name_2.snat_table_ids"
+  ],
+  "vpc-2": [
+    "alicloud_nat_gateway.gw_name_2.vpc_id"
+  ],
+  "ftb-3": [
+    "alicloud_nat_gateway.gw_name_3.forward_table_ids"
+  ],
+  "ngw-3": [
+    "alicloud_nat_gateway.gw_name_3.id"
+  ],
+  "name2": [
+    "alicloud_nat_gateway.gw_name_3.name"
+  ],
+  "stb-3": [
+    "alicloud_nat_gateway.gw_name_3.snat_table_ids"
+  ],
+  "vpc-3": [
+    "alicloud_nat_gateway.gw_name_3.vpc_id"
+  ]
+}

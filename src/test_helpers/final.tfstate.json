@@ -32,7 +32,7 @@
             "description": "",
             "forward_table_ids": "ftb-1",
             "id": "ngw-1",
-            "dummy_field": "ngw-2",
+            "dummy_key": "ngw-2",
             "instance_charge_type": "PostPaid",
             "name": "name1",
             "period": null,
@@ -42,7 +42,8 @@
             "vpc_id": "vpc-1"
           }
         }
-      ]
+      ],
+      "module": "module.mod_1"
     },
     {
       "mode": "managed",
@@ -58,7 +59,7 @@
             "description": "",
             "forward_table_ids": "ftb-2",
             "id": "ngw-2",
-            "dummy_field": "ngw-3",
+            "dummy_key": "ngw-3",
             "instance_charge_type": "PostPaid",
             "name": "name1",
             "period": null,
@@ -68,7 +69,8 @@
             "vpc_id": "vpc-2"
           }
         }
-      ]
+      ],
+      "module": "module.mod_1"
     },
     {
       "mode": "managed",
@@ -84,7 +86,7 @@
             "description": "",
             "forward_table_ids": "ftb-3",
             "id": "ngw-3",
-            "dummy_field": "ngw-1",
+            "dummy_key": "ngw-1",
             "instance_charge_type": "PostPaid",
             "name": "name2",
             "period": null,
@@ -94,7 +96,8 @@
             "vpc_id": "vpc-3"
           }
         }
-      ]
+      ],
+      "module": "module.mod_1"
     }
   ]
 }

@@ -1,0 +1,5 @@
+[
+  "resource \"alicloud_nat_gateway\" \"gw_name_1\" {\n  instance_charge_type = \"PostPaid\"\n  name                 = \"name1\"\n  specification        = \"Small\"\n  vpc_id               = \"vpc-1\"\n}\n\n",
+  "resource \"alicloud_nat_gateway\" \"gw_name_2\" {\n  instance_charge_type = \"PostPaid\"\n  name                 = \"name1\"\n  specification        = \"Small\"\n  vpc_id               = \"vpc-2\"\n}\n\n",
+  "resource \"alicloud_nat_gateway\" \"gw_name_3\" {\n  instance_charge_type = \"PostPaid\"\n  name                 = \"name2\"\n  specification        = \"Small\"\n  vpc_id               = \"vpc-3\"\n}\n"
+]

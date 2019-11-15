@@ -11,7 +11,17 @@ const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const copyFile = util.promisify(fs.copyFile);
 
+// For testing
+const dumpJson = () => null;
+// const dumpJson = (name, contents) => {
+//   const isJson = !(typeof contents === 'string');
+//   const fileName = isJson ? `jsons/${name}.json` : `jsons/${name}.txt`;
+//   const fileContents = isJson ? JSON.stringify(contents, null, 2) : contents;
+//   fs.writeFileSync(fileName, fileContents);
+// };
+
 const toRegexLut = (inverseLut) => {
+  dumpJson('toRegexLut-inverseLut', inverseLut);
   const keys = Object.keys(inverseLut);
   const result = keys.reduce((acc, key) => {
     const regex = `"${escapeStringRegexp(key)}"`;
@@ -20,20 +30,25 @@ const toRegexLut = (inverseLut) => {
       [regex]: inverseLut[key],
     };
   }, {});
+  dumpJson('toRegexLut-result', result);
   return result;
 };
 
 const processFile = (fileContents, regexLut) => {
+  dumpJson('processFile-fileContents', fileContents);
+  dumpJson('processFile-regexLut', regexLut);
   const result = Object.keys(regexLut)
     .reduce((lastFileContents, nextRegex) => {
       const regex = new RegExp(nextRegex, 'g');
       return lastFileContents
         .replace(regex, `"$\{${regexLut[nextRegex]}}"`);
     }, fileContents);
+  dumpJson('processFile-result', result);
   return result;
 };
 
 const filterOnlyNotIdsLut = (lut, dryness = 2) => {
+  dumpJson('filterOnlyNotIdsLut-lut', lut);
   const result = Object.keys(lut).reduce((acc, key) => {
     const ids = lut[key].filter((maybeId) => maybeId.endsWith('.id'));
     // DRY: Dont repeat yourself
@@ -42,10 +57,12 @@ const filterOnlyNotIdsLut = (lut, dryness = 2) => {
     if (!isIdReference && isWetEnough) return { ...acc, [key]: lut[key] };
     return acc;
   }, {});
+  dumpJson('filterOnlyNotIdsLut-result', result);
   return result;
 };
 
 const varToValueLut = (lut) => {
+  dumpJson('varToValueLut-lut', lut);
   const valueLut = Object.keys(lut)
     .reduce((acc, key) => {
       const parts = lut[key][0].split('.');
@@ -71,10 +88,12 @@ const varToValueLut = (lut) => {
   // Invert the mapping
   const result = Object.keys(sortedLut)
     .reduce((acc, key) => ({ ...acc, [sortedLut[key]]: key }), {});
+  dumpJson('varToValueLut-result', result);
   return result;
 };
 
 const valueLutToVarFile = (valueLut) => {
+  dumpJson('valueLutToVarFile-valueLut', valueLut);
   const fileString = Object.keys(valueLut)
     .reduce((acc, key) => `${acc}
 variable "${valueLut[key]}" {
@@ -82,11 +101,13 @@ variable "${valueLut[key]}" {
   default = "${key}"
 }
 `, '');
-  // fs.writeFileSync('jsons/valueLutToVarFile-fileString.txt', fileString);
+  dumpJson('valueLutToVarFile-fileString', fileString);
   return fileString;
 };
 
 const mergeLuts = (idsLut, valueLut) => {
+  dumpJson('mergeLuts-idsLut', idsLut);
+  dumpJson('mergeLuts-valueLut', valueLut);
   const varLut = Object.keys(valueLut)
     .reduce((acc, key) => ({
       ...acc,
@@ -94,10 +115,12 @@ const mergeLuts = (idsLut, valueLut) => {
     }), {});
 
   const result = { ...idsLut, ...varLut };
+  dumpJson('mergeLuts-result', result);
   return result;
 };
 
 const tfStateToRegexLut = (tfState) => {
+  dumpJson('tfStateToRegexLut-tfState', tfState);
   const { resources } = tfState;
   const inverseLut = genInverseLut(resources);
   const idsLut = filterOnlyIdsLut(inverseLut);
@@ -107,6 +130,7 @@ const tfStateToRegexLut = (tfState) => {
   const mergedLuts = mergeLuts(idsLut, valueLut);
   const regexLut = toRegexLut(mergedLuts);
   const result = { regexLut, varFileString };
+  dumpJson('tfStateToRegexLut-result', result);
   return result;
 };
 

@@ -4,8 +4,6 @@ const path = require('path');
 const _ = require('lodash');
 const flatten = require('flat');
 
-const { genInverseLut, filterOnlyIdsLut } = require('./common');
-
 const readFile = util.promisify(fs.readFile);
 const exists = util.promisify(fs.exists);
 const mkdir = util.promisify(fs.mkdir);
@@ -15,81 +13,129 @@ const writeFile = util.promisify(fs.writeFile);
 // There must be greater than MIN_MODULE_SIZE connected components to be considered a module
 const MIN_MODULE_SIZE = 2;
 
-const getValidIdsForInstance = (instance, allValidIds) => {
-  const flatAttributes = flatten(instance.attributes);
+// For testing
+const dumpJson = () => null;
+// const dumpJson = (name, contents) => {
+//   const isJson = !(typeof contents === 'string');
+//   const fileName = isJson ? `jsons/${name}.json` : `jsons/${name}.txt`;
+//   const fileContents = isJson ? JSON.stringify(contents, null, 2) : contents;
+//   fs.writeFileSync(fileName, fileContents);
+// };
+
+const getNameFromResource = (r) => `${r.provider}.${r.type}.${r.name}`;
+
+const getNameFromId = (tfState, id) => {
+  dumpJson('getNameFromId-tfState', tfState);
+  dumpJson('getNameFromId-id', id);
+  // TODO: Handle multiple instances
+  const resource = tfState.resources.filter((r) => r.instances[0].attributes.id === id)[0];
+  const result = getNameFromResource(resource);
+  dumpJson('getNameFromId-result', result);
+  return result;
+};
+
+const getValidNamesFromResource = (tfState, resource, allValidIds, allNames) => {
+  dumpJson('getValidNamesFromResource-tfState', tfState);
+  dumpJson('getValidNamesFromResource-resource', resource);
+  dumpJson('getValidNamesFromResource-allValidIds', allValidIds);
+  dumpJson('getValidNamesFromResource-allNames', allNames);
+  const flatAttributes = flatten(resource.instances[0].attributes);
   const attributeKeys = Object.keys(flatAttributes);
   const attributeWithIdAsValue = attributeKeys
     .filter((k) => allValidIds.indexOf(flatAttributes[k]) > -1);
   const filteredOutSelfReference = attributeWithIdAsValue.filter((k) => k !== 'id');
-  const result = filteredOutSelfReference.map((k) => flatAttributes[k]);
+  const idArr = filteredOutSelfReference.map((k) => flatAttributes[k]);
+  const result = idArr.map((id) => getNameFromId(tfState, id));
+  dumpJson('getValidNamesFromResource-result', result);
   return result;
 };
 
-const getInstanceForId = (tfState, id) => {
+const getResourceForName = (tfState, fullName) => {
+  dumpJson('getResourceForName-tfState', tfState);
+  dumpJson('getResourceForName-fullName', fullName);
+  const fullNameArr = fullName.split('.');
+  const name = _.nth(fullNameArr, -1);
+  const type = _.nth(fullNameArr, -2);
   const result = tfState.resources
-    .filter((resource) => _.get(resource, 'instances[0].attributes.id') === id)[0].instances[0];
+    .filter((resource) => resource.name === name
+    && resource.type === type)[0];
+  dumpJson('getResourceForName-result', result);
   return result;
 };
 
-const generateAdjacencyMatrix = (tfState, allValidIds) => {
-  const adj = {};
-  for (let i = 0; i < allValidIds.length; i += 1) {
-    const from = allValidIds[i];
-    const fromInstance = getInstanceForId(tfState, from);
-    const toIds = getValidIdsForInstance(fromInstance, allValidIds);
-    for (let j = 0; j < toIds.length; j += 1) {
-      const to = toIds[j];
-      if (adj[from] === undefined) adj[from] = {};
-      if (adj[to] === undefined) adj[to] = {};
-      adj[from][to] = true;
-      adj[to][from] = true;
+const generateAdjacencyMatrix = (tfState, allValidIds, allNames) => {
+  dumpJson('generateAdjacencyMatrix-tfState', tfState);
+  dumpJson('generateAdjacencyMatrix-allValidIds', allValidIds);
+  dumpJson('generateAdjacencyMatrix-allNames', allNames);
+  const result = {};
+  for (let i = 0; i < allNames.length; i += 1) {
+    const from = allNames[i];
+    const fromResource = getResourceForName(tfState, from);
+    const toNames = getValidNamesFromResource(tfState, fromResource, allValidIds, allNames);
+    for (let j = 0; j < toNames.length; j += 1) {
+      const to = toNames[j];
+      if (result[from] === undefined) result[from] = {};
+      if (result[to] === undefined) result[to] = {};
+      result[from][to] = true;
+      result[to][from] = true;
     }
   }
-  return adj;
+  dumpJson('generateAdjacencyMatrix-result', result);
+  return result;
 };
 
-const getAllConnectedComponentsForId = (tfState, allValidIds, adj, visited, color, id) => {
-  if (visited[id]) {
+const getAllConnectedComponentsForName = (tfState, allNames, adj, visited, color, name) => {
+  if (visited[name]) {
     return visited;
   }
-  const newVisited = _.merge(visited, { [id]: color });
+  const newVisited = _.merge(visited, { [name]: color });
+  dumpJson('getAllConnectedComponentsForName-tfState', tfState);
+  dumpJson('getAllConnectedComponentsForName-allNames', allNames);
+  dumpJson('getAllConnectedComponentsForName-adj', adj);
+  dumpJson('getAllConnectedComponentsForName-visited', visited);
+  dumpJson('getAllConnectedComponentsForName-color', color);
+  dumpJson('getAllConnectedComponentsForName-name', name);
 
   // If component isnt connected to anything then do nothing
-  if (adj[id] === undefined) return newVisited;
-  const childIds = Object.keys(adj[id]);
+  if (adj[name] === undefined) return newVisited;
+  const childNames = Object.keys(adj[name]);
 
-  const result = childIds
-    .reduce((runningVisited, childId) => getAllConnectedComponentsForId(
+  const result = childNames
+    .reduce((runningVisited, childName) => getAllConnectedComponentsForName(
       tfState,
-      allValidIds,
+      allNames,
       adj,
       runningVisited,
       color,
-      childId,
+      childName,
     ),
     newVisited);
-
+  dumpJson('getAllConnectedComponentsForName-result', result);
   return result;
 };
 
-const colorAllConnectedComponents = (tfState, allValidIds, adj) => {
-  let visited = allValidIds.reduce((acc, k) => ({ ...acc, [k]: false }), {});
+const colorAllConnectedComponents = (tfState, allNames, adj) => {
+  dumpJson('colorAllConnectedComponents-tfState', tfState);
+  dumpJson('colorAllConnectedComponents-allNames', allNames);
+  dumpJson('colorAllConnectedComponents-adj', adj);
+  let visited = allNames.reduce((acc, k) => ({ ...acc, [k]: false }), {});
   let color = 0;
 
-  for (let i = 0; i < allValidIds.length; i += 1) {
-    if (!visited[allValidIds[i]]) { color += 1; }
-    visited = getAllConnectedComponentsForId(tfState,
-      allValidIds,
+  for (let i = 0; i < allNames.length; i += 1) {
+    if (!visited[allNames[i]]) { color += 1; }
+    visited = getAllConnectedComponentsForName(tfState,
+      allNames,
       adj,
       visited,
       color,
-      allValidIds[i]);
+      allNames[i]);
   }
-
+  dumpJson('colorAllConnectedComponents-visited', visited);
   return visited;
 };
 
 const coloredComponentsTo2dArr = (coloredComponents) => {
+  dumpJson('coloredComponentsTo2dArr-coloredComponents', coloredComponents);
   const invLut = Object.keys(coloredComponents).reduce((acc, id) => {
     const color = coloredComponents[id];
     const idVec = acc[color] || [];
@@ -110,14 +156,17 @@ const coloredComponentsTo2dArr = (coloredComponents) => {
       modules[0] = modules[0].concat(invLut[color]);
     }
   }
-
+  dumpJson('coloredComponentsTo2dArr-modules', modules);
   return modules;
 };
 
 const getModuleIdFromResource = (componentArr, resource) => {
-  const { id } = resource.instances[0].attributes;
+  dumpJson('getModuleIdFromResource-componentArr', componentArr);
+  dumpJson('getModuleIdFromResource-resource', resource);
+  const name = getNameFromResource(resource);
   for (let i = 0; i < componentArr.length; i += 1) {
-    if (componentArr[i].indexOf(id) > -1) {
+    if (componentArr[i].indexOf(name) > -1) {
+      dumpJson('getModuleIdFromResource-id', i);
       return i;
     }
   }
@@ -125,28 +174,36 @@ const getModuleIdFromResource = (componentArr, resource) => {
 };
 
 const addModuleToTfState = (tfState, componentArr) => {
+  dumpJson('addModuleToTfState-tfState', tfState);
+  dumpJson('addModuleToTfState-componentArr', componentArr);
   const tfs = _.cloneDeep(tfState);
 
   for (let r = 0; r < tfs.resources.length; r += 1) {
     const moduleId = getModuleIdFromResource(componentArr, tfs.resources[r]);
     tfs.resources[r].module = `module.mod_${moduleId}`;
   }
-
+  dumpJson('addModuleToTfState-tfs', tfs);
   return tfs;
 };
 
-const findIdForHcl = (tfState, hclArray) => {
+const generateNameToHclLut = (tfState, hclArray) => {
+  dumpJson('generateNameToHclLut-tfState', tfState);
+  dumpJson('generateNameToHclLut-hclArray', hclArray);
   const names = hclArray.map((res) => res.match(/resource "\S+" "(.*)"/)[1]);
   const alignedResources = names.map((name) => _.find(tfState.resources, { name }));
-  const result = alignedResources.reduce((acc, resource, index) => ({
-    ...acc,
-    [resource.instances[0].attributes.id]: hclArray[index],
-  }), {});
-
+  const result = alignedResources.reduce((acc, resource, index) => {
+    const name = getNameFromResource(resource);
+    return {
+      ...acc,
+      [name]: hclArray[index],
+    };
+  }, {});
+  dumpJson('generateNameToHclLut-result', result);
   return result;
 };
 
 const mainTfGenerator = (numModules) => {
+  dumpJson('mainTfGenerator-numModules', numModules);
   const result = [...Array(numModules)]
     .reduce((acc, next, index) => `
 ${acc}
@@ -154,7 +211,21 @@ module "mod_${index}" {
   source = "./mod_${index}"
 }
 `, '');
+  dumpJson('mainTfGenerator-result', result);
   return result;
+};
+
+const moduleToTfFiles = async (nameToHclLut, mod, dirPath) => {
+  dumpJson('moduleToTfFiles-nameToHclLut', nameToHclLut);
+  dumpJson('moduleToTfFiles-mod', mod);
+  dumpJson('moduleToTfFiles-dirPath', dirPath);
+  const tfFileLut = mod.reduce((acc, id) => {
+    const fileName = `${_.nth(id.split('.'), -2)}.tf`;
+    return { ...acc, [fileName]: `${acc[fileName] || ''}${nameToHclLut[id]}` };
+  }, {});
+  const writePromises = Object.keys(tfFileLut)
+    .map((key) => writeFile(path.join(dirPath, key), tfFileLut[key]));
+  return Promise.all(writePromises);
 };
 
 const modularize = async (generatedDir, outputDir) => {
@@ -166,11 +237,11 @@ const modularize = async (generatedDir, outputDir) => {
   }
 
   const { resources } = tfState;
-  const inverseLut = genInverseLut(resources);
-  const idsToNameLut = filterOnlyIdsLut(inverseLut);
-  const allValidIds = Object.keys(idsToNameLut);
-  const adj = generateAdjacencyMatrix(tfState, allValidIds);
-  const coloredComponents = colorAllConnectedComponents(tfState, allValidIds, adj);
+  const allNames = resources.map((r) => getNameFromResource(r));
+  // TODO: Handle multiple instances
+  const allResourceIds = resources.map((r) => r.instances[0].attributes.id);
+  const adj = generateAdjacencyMatrix(tfState, allResourceIds, allNames);
+  const coloredComponents = colorAllConnectedComponents(tfState, allNames, adj);
   const componentArr = coloredComponentsTo2dArr(coloredComponents);
   const newTfState = addModuleToTfState(tfState, componentArr);
   const newStatePath = path.join(outputDir, 'terraform.tfstate');
@@ -185,14 +256,12 @@ const modularize = async (generatedDir, outputDir) => {
   });
   const allFiles = await Promise.all(fileRead);
   const resourceArr = allFiles.join('\n').split('resource ').splice(1).map((v) => `resource ${v}`);
-  const idToHclLut = findIdForHcl(tfState, resourceArr);
+  const nameToHclLut = generateNameToHclLut(tfState, resourceArr);
   const writePromises = componentArr.map(async (mod, index) => {
     const dirPath = path.join(outputDir, `mod_${index}`);
     const isDirExist = await exists(dirPath);
     if (!isDirExist) await mkdir(dirPath);
-    const tfFilePath = path.join(dirPath, 'flat.tf');
-    const tfFileContent = mod.reduce((acc, id) => `${acc}${idToHclLut[id]}`, '');
-    await writeFile(tfFilePath, tfFileContent);
+    await moduleToTfFiles(nameToHclLut, mod, dirPath);
   });
   await Promise.all(writePromises);
   const mainTfContents = mainTfGenerator(componentArr.length);
@@ -201,15 +270,17 @@ const modularize = async (generatedDir, outputDir) => {
 };
 
 module.exports = {
-  getValidIdsForInstance,
-  getInstanceForId,
+  getValidNamesFromResource,
+  getResourceForName,
+  getNameFromResource,
+  getNameFromId,
   generateAdjacencyMatrix,
-  getAllConnectedComponentsForId,
+  getAllConnectedComponentsForName,
   colorAllConnectedComponents,
   coloredComponentsTo2dArr,
   getModuleIdFromResource,
   addModuleToTfState,
-  findIdForHcl,
+  generateNameToHclLut,
   mainTfGenerator,
   modularize,
 };
