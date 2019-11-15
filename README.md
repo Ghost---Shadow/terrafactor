@@ -21,7 +21,7 @@ npm i -g terrafactor
 terrafactor ./inputDir ./outputDir
 ```
 
-It will generate two directories `./outputDir` and `./outputDir_processed`.
+It will generate three directories `./outputDir`, `./outputDir_mst` and `./outputDir_processed`.
 
 ## Post processing
 
@@ -29,8 +29,8 @@ Currently it does the following postprocessing steps
 
 1. Replaces all hardcoded `id` with `"${resource_type.resource_name.id}"`
 2. Maintains [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)-ness by refactoring out repeated values into a `variables.tf` file.
+3. Generate modules containing clusters of all connected components. Then have the `main.tf` import all the modules. `mod_0` constains all resources which have a very small cluster `( < 2 )`
 
 Planned
 
-1. Generate a forest of minimum spanning trees of connected components and make one module per tree. Then have the `main.tf` import all the modules.
-2. Support for `count` property of terraform.
+1. Support for `count` property of terraform.
