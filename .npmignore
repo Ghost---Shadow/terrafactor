@@ -106,3 +106,8 @@ public
 terrafactor_output*/
 jsons*/
 .terraform/
+
+# Additional for .npmignore
+src/test_helpers/*
+test_integration.sh
+src/**/*.test.js

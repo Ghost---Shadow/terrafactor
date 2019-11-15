@@ -1,0 +1,8 @@
+{
+  "\"ngw\\-1\"": "alicloud_nat_gateway.gw_name_1.id",
+  "\"ngw\\-2\"": "alicloud_nat_gateway.gw_name_2.id",
+  "\"ngw\\-3\"": "alicloud_nat_gateway.gw_name_3.id",
+  "\"PostPaid\"": "var.instance_charge_type_",
+  "\"name1\"": "var.name_",
+  "\"Small\"": "var.specification_"
+}

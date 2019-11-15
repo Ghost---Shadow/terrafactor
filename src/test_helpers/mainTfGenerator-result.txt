@@ -1,0 +1,10 @@
+
+
+
+module "mod_0" {
+  source = "./mod_0"
+}
+
+module "mod_1" {
+  source = "./mod_1"
+}

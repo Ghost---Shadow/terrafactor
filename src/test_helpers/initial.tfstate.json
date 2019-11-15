@@ -1,0 +1,100 @@
+{
+  "version": 4,
+  "terraform_version": "0.12.10",
+  "serial": 1,
+  "lineage": "",
+  "outputs": {
+    "alicloud_nat_gateway_gw_name_1_id": {
+      "value": "ngw-1",
+      "type": "string"
+    },
+    "alicloud_nat_gateway_gw_name_2_id": {
+      "value": "ngw-2",
+      "type": "string"
+    },
+    "alicloud_nat_gateway_gw_name_3_id": {
+      "value": "ngw-3",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "alicloud_nat_gateway",
+      "name": "gw_name_1",
+      "provider": "provider.alicloud",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bandwidth_package_ids": "",
+            "bandwidth_packages": [],
+            "description": "",
+            "forward_table_ids": "ftb-1",
+            "id": "ngw-1",
+            "dummy_key": "ngw-2",
+            "instance_charge_type": "PostPaid",
+            "name": "name1",
+            "period": null,
+            "snat_table_ids": "stb-1",
+            "spec": null,
+            "specification": "Small",
+            "vpc_id": "vpc-1"
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "alicloud_nat_gateway",
+      "name": "gw_name_2",
+      "provider": "provider.alicloud",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bandwidth_package_ids": "",
+            "bandwidth_packages": [],
+            "description": "",
+            "forward_table_ids": "ftb-2",
+            "id": "ngw-2",
+            "dummy_key": "ngw-3",
+            "instance_charge_type": "PostPaid",
+            "name": "name1",
+            "period": null,
+            "snat_table_ids": "stb-2",
+            "spec": null,
+            "specification": "Small",
+            "vpc_id": "vpc-2"
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "alicloud_nat_gateway",
+      "name": "gw_name_3",
+      "provider": "provider.alicloud",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bandwidth_package_ids": "",
+            "bandwidth_packages": [],
+            "description": "",
+            "forward_table_ids": "ftb-3",
+            "id": "ngw-3",
+            "dummy_key": "ngw-1",
+            "instance_charge_type": "PostPaid",
+            "name": "name2",
+            "period": null,
+            "snat_table_ids": "stb-3",
+            "spec": null,
+            "specification": "Small",
+            "vpc_id": "vpc-3"
+          }
+        }
+      ]
+    }
+  ]
+}

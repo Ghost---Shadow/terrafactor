@@ -1,0 +1,14 @@
+{
+  "provider.alicloud.alicloud_nat_gateway.gw_name_1": {
+    "provider.alicloud.alicloud_nat_gateway.gw_name_2": true,
+    "provider.alicloud.alicloud_nat_gateway.gw_name_3": true
+  },
+  "provider.alicloud.alicloud_nat_gateway.gw_name_2": {
+    "provider.alicloud.alicloud_nat_gateway.gw_name_1": true,
+    "provider.alicloud.alicloud_nat_gateway.gw_name_3": true
+  },
+  "provider.alicloud.alicloud_nat_gateway.gw_name_3": {
+    "provider.alicloud.alicloud_nat_gateway.gw_name_2": true,
+    "provider.alicloud.alicloud_nat_gateway.gw_name_1": true
+  }
+}

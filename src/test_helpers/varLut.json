@@ -1,0 +1,16 @@
+{
+  "PostPaid": [
+    "alicloud_nat_gateway.gw_name_1.instance_charge_type",
+    "alicloud_nat_gateway.gw_name_2.instance_charge_type",
+    "alicloud_nat_gateway.gw_name_3.instance_charge_type"
+  ],
+  "name1": [
+    "alicloud_nat_gateway.gw_name_1.name",
+    "alicloud_nat_gateway.gw_name_2.name"
+  ],
+  "Small": [
+    "alicloud_nat_gateway.gw_name_1.specification",
+    "alicloud_nat_gateway.gw_name_2.specification",
+    "alicloud_nat_gateway.gw_name_3.specification"
+  ]
+}

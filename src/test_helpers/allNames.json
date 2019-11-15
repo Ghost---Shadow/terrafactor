@@ -1,0 +1,5 @@
+[
+  "provider.alicloud.alicloud_nat_gateway.gw_name_1",
+  "provider.alicloud.alicloud_nat_gateway.gw_name_2",
+  "provider.alicloud.alicloud_nat_gateway.gw_name_3"
+]
