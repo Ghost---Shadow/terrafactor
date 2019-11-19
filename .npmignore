@@ -112,3 +112,4 @@ scratch
 src/test_helpers/*
 test_integration*.sh
 src/**/*.test.js
+.eslintrc.js
