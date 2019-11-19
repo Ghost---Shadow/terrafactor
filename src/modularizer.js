@@ -190,13 +190,15 @@ const addModuleToTfState = (tfState, componentArr) => {
 const generateNameToHclLut = (tfState, hclArray) => {
   dumpJson('generateNameToHclLut-tfState', tfState);
   dumpJson('generateNameToHclLut-hclArray', hclArray);
-  const names = hclArray.map((res) => res.match(/resource "\S+" "(.*)"/)[1]);
+  // https://github.com/Ghost---Shadow/terrafactor/issues/1#issuecomment-554375239
+  const names = hclArray.map((res) => res.match(/resource "\S+" "(.*)"/)[1]).filter((k) => k);
+  const filteredHclArray = hclArray.filter((res) => res.match(/resource "\S+" "(.*)"/)[1]);
   const alignedResources = names.map((name) => _.find(tfState.resources, { name }));
   const result = alignedResources.reduce((acc, resource, index) => {
     const name = getNameFromResource(resource);
     return {
       ...acc,
-      [name]: hclArray[index],
+      [name]: filteredHclArray[index],
     };
   }, {});
   dumpJson('generateNameToHclLut-result', result);

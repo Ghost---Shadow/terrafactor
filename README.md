@@ -23,6 +23,12 @@ terrafactor ./inputDir ./outputDir
 
 It will generate three directories `./outputDir`, `./outputDir_mst` and `./outputDir_processed`.
 
+If you want to opt out of the modularize feature. You can run.
+
+```sh
+terrafactor ./inputDir ./outputDir --modularize=false
+```
+
 ## Post processing
 
 Currently it does the following postprocessing steps

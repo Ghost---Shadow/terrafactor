@@ -1,17 +1,21 @@
 const fs = require('fs');
 const path = require('path');
+const { argv } = require('yargs');
 const { mergeStatesV3, mergeStatesV4 } = require('./state-merger');
 const { walk } = require('./walker');
 
 const sanitizeInputs = () => {
-  const inputDir = process.argv[2];
-  const outputDir = process.argv[3] || './terrafactor_output';
+  const positionalArgv = argv._;
+  const inputDir = positionalArgv[0];
+  const outputDir = positionalArgv[1] || './terrafactor_output';
   if (!inputDir || !outputDir) {
     console.error('Usage:\n\nterrafactor ./inputDir ./outputDir');
 
     process.exit(1);
   }
-  return { inputDir, outputDir };
+  const shouldModularize = argv.modularize === undefined
+    ? true : JSON.parse(argv.modularize); // Typecast to bool
+  return { inputDir, outputDir, shouldModularize };
 };
 
 const makeAllDirsIfNotExists = (outputDir) => {

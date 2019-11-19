@@ -207,21 +207,7 @@ const processDir = async (fromDir, toDir, regexLut, varFileString) => {
   await writeFile(path.join(toDir, 'variables.tf'), filtedVarFile);
 };
 
-const postProcess = async (fromDir, toDir) => {
-  const statePath = path.join(fromDir, 'terraform.tfstate');
-  const stateJson = JSON.parse(fs.readFileSync(statePath).toString());
-  if (stateJson.version !== 4) {
-    console.error('Only tfstate version 4 is supported');
-    process.exit(1);
-  }
-
-  const { regexLut, varFileString } = tfStateToRegexLut(stateJson);
-  const stateCopyPromise = copyFile(path.join(fromDir, 'terraform.tfstate'),
-    path.join(toDir, 'terraform.tfstate'));
-  const mainTfCopyPromise = copyFile(path.join(fromDir, 'main.tf'),
-    path.join(toDir, 'main.tf'));
-  const providerTfCopyPromise = copyFile(path.join(fromDir, 'provider.tf'), path.join(toDir, 'provider.tf'));
-
+const postProcessWithModules = async (fromDir, toDir, regexLut, varFileString) => {
   const allDirPromises = (await readdir(fromDir))
     .map(async (fileName) => {
       const s = await stat(path.join(fromDir, fileName));
@@ -238,9 +224,38 @@ const postProcess = async (fromDir, toDir) => {
       regexLut, varFileString,
     ));
 
-  return Promise.all([...modulePromises,
-    stateCopyPromise, mainTfCopyPromise,
-    providerTfCopyPromise]);
+  return Promise.all(modulePromises);
+};
+
+const postProcessWithoutModules = async (fromDir, toDir, regexLut, varFileString) => processDir(
+  fromDir,
+  toDir,
+  regexLut,
+  varFileString,
+);
+
+const postProcess = async (fromDir, toDir, isModularized) => {
+  const statePath = path.join(fromDir, 'terraform.tfstate');
+  const stateJson = JSON.parse(fs.readFileSync(statePath).toString());
+  if (stateJson.version !== 4) {
+    console.error('Only tfstate version 4 is supported');
+    process.exit(1);
+  }
+
+  const { regexLut, varFileString } = tfStateToRegexLut(stateJson);
+  const stateCopyPromise = copyFile(path.join(fromDir, 'terraform.tfstate'),
+    path.join(toDir, 'terraform.tfstate'));
+  const providerTfCopyPromise = copyFile(path.join(fromDir, 'provider.tf'), path.join(toDir, 'provider.tf'));
+
+  await Promise.all([stateCopyPromise, providerTfCopyPromise]);
+
+  if (isModularized) {
+    await copyFile(path.join(fromDir, 'main.tf'),
+      path.join(toDir, 'main.tf'));
+    await postProcessWithModules(fromDir, toDir, regexLut, varFileString);
+  } else {
+    await postProcessWithoutModules(fromDir, toDir, regexLut, varFileString);
+  }
 };
 
 module.exports = {

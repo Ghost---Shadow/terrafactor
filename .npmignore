@@ -110,5 +110,5 @@ scratch
 
 # Additional for .npmignore
 src/test_helpers/*
-test_integration.sh
+test_integration*.sh
 src/**/*.test.js
